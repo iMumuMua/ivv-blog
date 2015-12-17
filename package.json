@@ -1,0 +1,17 @@
+{
+  "name": "ivv-blog",
+  "version": "1.0.0",
+  "description": "iMumu's Blog",
+  "repository": "https://github.com/iMumuMua/ivv-blog.git",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "blog"
+  ],
+  "author": "iMumuMua <imumu@foxmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "gulp": "^3.9.0"
+  }
+}
