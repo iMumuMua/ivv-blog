@@ -16,7 +16,9 @@ var csswring = require('csswring');
 var jade = require('jade');
 
 // article data
-var articles = require('./src/data/articles.js');
+var articles = require('./src/data/articles');
+
+var markdown = require('./utils/markdown');
 
 var blogDir = __dirname;
 
@@ -69,6 +71,16 @@ gulp.task('watch:less', function() {
     gulp.watch(lessSrc, ['less']);
 });
 
+
+// markdown tasks
+gulp.task('markdown', function() {
+    return gulp.src(['./src/articles/**/*.md'])
+        .pipe(markdown())
+        .pipe(plugins.rename({
+            extname: '.html'
+        }))
+        .pipe(gulp.dest('./html-articles/'));
+});
 
 // main tasks
 gulp.task('build', function(callback) {

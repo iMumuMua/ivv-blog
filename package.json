@@ -19,7 +19,12 @@
     "gulp-less": "^3.0.5",
     "gulp-load-plugins": "^1.1.0",
     "gulp-postcss": "^6.0.1",
+    "gulp-rename": "^1.2.2",
+    "highlight.js": "^8.7.0",
     "jade": "^1.11.0",
-    "run-sequence": "^1.1.5"
+    "jsdom": "^6.1.0",
+    "marked": "^0.3.5",
+    "run-sequence": "^1.1.5",
+    "through2": "^2.0.0"
   }
 }
