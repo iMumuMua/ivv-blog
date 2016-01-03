@@ -1,11 +1,11 @@
 // 文章数据
 
-module.exports = [
-    {
-        title: '全新的博客',
-        desc: '用gulp构建的静态博客',
-        date: '2015-12-17 21:30',
-        img: 'http://placehold.it/640x200',
-        tags: ['静态', '博客']
-    }
-];
+module.exports = {
+    '2016-01': [
+        {
+            title: '使用go语言重写博客',
+            date: '2016-01-01 19:45',
+            alias: 'new-go-website'
+        }
+    ]
+};

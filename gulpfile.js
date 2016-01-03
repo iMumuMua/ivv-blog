@@ -46,6 +46,10 @@ gulp.task('jade:index', function(callback) {
 
 gulp.task('jade', ['jade:index']);
 
+gulp.task('watch:jade', function() {
+    gulp.watch('./src/templates/**/*.jade', ['jade']);
+});
+
 
 // less tasks
 
@@ -80,6 +84,12 @@ gulp.task('markdown', function() {
             extname: '.html'
         }))
         .pipe(gulp.dest('./html-articles/'));
+});
+
+gulp.task('watch', ['watch:less', 'watch:jade']);
+
+gulp.task('dev', function(callback) {
+    runSequence('build', 'watch');
 });
 
 // main tasks
