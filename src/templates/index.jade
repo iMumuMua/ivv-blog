@@ -18,6 +18,15 @@ html
                 p iMumu的个人博客 - 归档
 
         .container
+            each monthArticles, date in articles
+                .panel.panel-default
+                    .panel-heading
+                        h3.panel-title #{date}
+                    .panel-body
+                        each article in monthArticles
+                            h3.article-item
+                                a(href="./articles/#{date}/#{article.alias}") #{article.title}
+                                small.text-muted #{article.date}
 
 
         script(src='./lib/jquery-2.1.4.js')
