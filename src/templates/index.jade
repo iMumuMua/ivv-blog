@@ -13,7 +13,8 @@ html
     body
         .jumbotron
             .container.text-center
-                include /src/templates/logo.jade
+                a.logo-link.center-block(href='http://www.ifviva.com', target='_blank')
+                    include /src/templates/logo.jade
                 h1 天时
                 p iMumu的个人博客 - 归档
 
@@ -25,7 +26,7 @@ html
                     .panel-body
                         each article in monthArticles
                             h3.article-item
-                                a(href="./articles/#{date}/#{article.alias}") #{article.title}
+                                a(href="./articles/#{date}/#{article.alias}/index.html") #{article.title}
                                 small.text-muted #{article.date}
 
 

@@ -1,0 +1,30 @@
+doctype html
+html
+    head
+        meta(charset='utf-8')
+        title #{title} - 天时 - iMumu的个人博客归档
+        meta(http-equiv='X-UA-Compatible', content='IE=edge')
+        meta(name='viewport', content='width=device-width, initial-scale=1')
+        meta(name='description', content='iMumu的个人博客')
+        meta(name='author', content='iMumu<imumu@foxmail.com>')
+        meta(name='keywords', content='天时,个人博客,web,html5,javascript,js,css,css3')
+        link(rel='stylesheet', href='../../../lib/bootstrap/css/bootstrap.css')
+        link(rel='stylesheet', href='../../../css/article.css')
+    body
+        .jumbotron
+            .container.text-center
+                h1 #{title}
+
+        .container
+            ol.breadcrumb
+                li: a(href='../../../index.html') 首页
+                li.active #{title}
+            div!= content
+
+        hr
+        .container
+            p.text-center
+                a(href='http://www.ifviva.com', target='_blank') 访问博客网站
+
+        script(src='../../../lib/jquery-2.1.4.js')
+        script(src='../../../lib/bootstrap/js/bootstrap.js')

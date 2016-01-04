@@ -8,10 +8,21 @@ var autoprefixer = require('autoprefixer');
 var mqpacker = require('css-mqpacker');
 var csswring = require('csswring');
 
+var markdown = require('./utils/markdown');
+
 // jade tasks
-var renderIndex = require('./utils/render-index');
-gulp.task('jade:index', renderIndex);
-gulp.task('jade', ['jade:index']);
+var renderer = require('./utils/renderer');
+gulp.task('jade:index', renderer.renderIndex);
+gulp.task('jade:article', function() {
+    return gulp.src('./html-articles/**/*.html')
+        .pipe(renderer.renderArticles())
+        .pipe(plugins.rename({
+            basename: 'index',
+            extname: '.html'
+        }))
+        .pipe(gulp.dest('./www/articles'));
+});
+gulp.task('jade', ['jade:index', 'jade:article']);
 
 
 // less tasks
@@ -62,7 +73,7 @@ gulp.task('watch', ['watch:less', 'watch:jade']);
 
 // main tasks
 gulp.task('build', function(callback) {
-    runSequence('less', 'jade', 'copy', callback);
+    runSequence('less', 'markdown', 'jade', 'copy', callback);
 });
 gulp.task('dev', function(callback) {
     runSequence('build', 'watch');
