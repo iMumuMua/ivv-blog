@@ -89,7 +89,8 @@ MYSQLND_METHOD(mysqlnd_conn, set_charset)(MYSQLND * const conn, const char * con
 
 可以看到，mysqlnd使用了SQL语句`SET NAMES utf8mb4`来设置字符集的。而如果没有使用这个扩展，则会使用`mysql.h`里声明的函数：
 ```c
-int          STDCALL mysql_set_character_set(MYSQL *mysql, const char *csname);```
+int          STDCALL mysql_set_character_set(MYSQL *mysql, const char *csname);
+```
 这个头文件是放在本地的，安装mysql扩展时需要设置这个路径，我估计，这就是问题服务器失败的原因吧。因为是使用原生的MySQL API，所以我猜测设置字符集时，会从本地路径`/usr/share/mysql/charsets/`读取配置，我查看了这个目录下的字符集配置，果然没有utf8mb4，所以失败，所以有在这个目录下添加这个字符集的描述的解决方案。
 
 通过上面的分析，除了添加描述的解决方案之外，还可以装mysqlnd扩展，并添加配置参数`--with-mysql=mysqlnd`。
