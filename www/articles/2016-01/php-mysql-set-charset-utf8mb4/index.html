@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>解决PHP使用mysql_set_charset设置utf8mb4失败的问题 - 天时 - iMumu的个人博客归档</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="iMumu的个人博客">
+        <meta name="author" content="iMumu&lt;imumu@foxmail.com&gt;">
+        <meta name="keywords" content="天时,个人博客,web,html5,javascript,js,css,css3">
+        <link rel="stylesheet" href="../../../lib/bootstrap/css/bootstrap.css">
+        <link rel="stylesheet" href="../../../lib/tomorrow.css">
+        <link rel="stylesheet" href="../../../css/article.css">
+    </head>
+    <body>
+        <div class="jumbotron">
+            <div class="container text-center">
+                <h1>解决PHP使用mysql_set_charset设置utf8mb4失败的问题</h1>
+            </div>
+        </div>
+        <div class="container">
+            <ol class="breadcrumb">
+                <li><a href="../../../index.html">首页</a></li>
+                <li class="active">解决PHP使用mysql_set_charset设置utf8mb4失败的问题</li>
+            </ol>
+            <div><p>在使用PHP的<code>mysql_set_charset</code>函数设置字符集为<code>utf8mb4</code>时，失败了，并且出现了乱码。
+使用<code>echo mysql_errno() . ": " . mysql_error(). "\n";</code>输出错误信息，
+得到：<code>2009: Can't initialize character set utf8mb4 (path: /usr/share/mysql/charsets/)</code>。</p>
+<p>网上搜了很久，也在stackoverflow上提问了，依然没有找到好的解决方案。看错误提示，似乎是要修改<code>/usr/share/mysql/charsets/</code>里的配置，网上也确实有说过是这样解决的，但是，我连接的可是远程的数据库，并且在另一服务器上没有出现这个问题，所以不想采取这个方法。</p>
+<p><em>解决问题时，乱试是没有用的，必须根据环境、现象、日志及错误信息等有用信息去分析解决</em>。所以，既然这个错误信息不能给我提供足够多的有用信息，我就需要自己分析。</p>
+<p>首先，我需要确定范围，确定是哪一部分出的问题。两台服务器连同一个数据库，代码一样，那必然就是PHP层出的问题吧。</p>
+<p>接着，对比两台服务器的PHP环境，经过分析测试，两台服务器虽然PHP版本不一样，但这并不是原因，我试过在本地搭建了与问题服务器相同版本的PHP环境，依然没有这个问题。再看PHP扩展，它们的区别是，问题服务器的PHP启用的是mysql扩展，并且没有装mysqlnd扩展，正常服务器安装并启用了mysqlnd扩展。</p>
+<p>我有点怀疑是扩展问题，但也觉得不太合理，没理由会不支持某一字符集吧。本来想测试在同一机器上这两种扩展的区别，因为某些原因没有成功，于是我决定简单看一下这两个扩展的源代码，看看<code>mysql_set_charset</code>这个函数到底做了什么。</p>
+<p>经过一翻探索，找到了这个函数的定义：</p>
+<pre class="hljs"><code class="lang-c">PHP_FUNCTION(mysql_set_charset)
+{
+    zval *mysql_link = <span class="hljs-literal">NULL</span>;
+    <span class="hljs-keyword">char</span> *csname;
+    <span class="hljs-keyword">int</span> <span class="hljs-keyword">id</span> = -<span class="hljs-number">1</span>, csname_len;
+    php_mysql_conn *mysql;
+
+    <span class="hljs-keyword">if</span> (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, <span class="hljs-string">"s|r"</span>, &amp;csname, &amp;csname_len, &amp;mysql_link) == FAILURE) {
+        <span class="hljs-keyword">return</span>;
+    }
+
+    <span class="hljs-keyword">if</span> (ZEND_NUM_ARGS() == <span class="hljs-number">1</span>) {
+        <span class="hljs-keyword">id</span> = php_mysql_get_default_link(INTERNAL_FUNCTION_PARAM_PASSTHRU);
+        CHECK_LINK(<span class="hljs-keyword">id</span>);
+    }
+
+    ZEND_FETCH_RESOURCE2(mysql, php_mysql_conn *, &amp;mysql_link, <span class="hljs-keyword">id</span>, <span class="hljs-string">"MySQL-Link"</span>, le_link, le_plink);
+
+    <span class="hljs-keyword">if</span> (!mysql_set_character_set(mysql-&gt;conn, csname)) {
+        RETURN_TRUE;
+    } <span class="hljs-keyword">else</span> {
+        RETURN_FALSE;
+    }
+}
+</code></pre>
+<p>再接着看<code>mysql_set_character_set</code>这个函数，发现它和是否启用mysqlnd扩展有关：</p>
+<pre class="hljs"><code class="lang-c"><span class="hljs-preprocessor">#<span class="hljs-keyword">if</span> defined(MYSQL_USE_MYSQLND)</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">include</span> <span class="hljs-string">"ext/mysqlnd/mysqlnd.h"</span></span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">include</span> <span class="hljs-string">"mysql_mysqlnd.h"</span></span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">else</span></span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;mysql.h&gt;</span></span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">endif</span></span>
+</code></pre>
+<p>再看mysqlnd是如何实现的：</p>
+<pre class="hljs"><code class="lang-c"><span class="xml">/* </span><span class="hljs-expression">{{{ <span class="hljs-variable">mysqlnd</span>_<span class="hljs-variable">conn</span>::<span class="hljs-variable">set</span>_<span class="hljs-variable">charset</span> */
+<span class="hljs-variable">static</span> <span class="hljs-variable">enum</span>_<span class="hljs-variable">func</span>_<span class="hljs-variable">status</span>
+<span class="hljs-variable">MYSQLND</span>_<span class="hljs-variable">METHOD</span>(<span class="hljs-variable">mysqlnd</span>_<span class="hljs-variable">conn</span>, <span class="hljs-variable">set</span>_<span class="hljs-variable">charset</span>)(<span class="hljs-variable">MYSQLND</span> * <span class="hljs-variable">const</span> <span class="hljs-variable">conn</span>, <span class="hljs-variable">const</span> <span class="hljs-variable">char</span> * <span class="hljs-variable">const</span> <span class="hljs-variable">csname</span> <span class="hljs-variable">TSRMLS</span>_<span class="hljs-variable">DC</span>)
+{
+    <span class="hljs-variable">enum</span>_<span class="hljs-variable">func</span>_<span class="hljs-variable">status</span> <span class="hljs-variable">ret</span> = <span class="hljs-variable">PASS</span>;
+    <span class="hljs-variable">char</span> * <span class="hljs-variable">query</span>;
+    <span class="hljs-variable">size</span>_<span class="hljs-variable">t</span> <span class="hljs-variable">query</span>_<span class="hljs-variable">len</span>;
+    <span class="hljs-variable">const</span> <span class="hljs-variable">MYSQLND</span>_<span class="hljs-variable">CHARSET</span> * <span class="hljs-variable">const</span> <span class="hljs-variable">charset</span> = <span class="hljs-variable">mysqlnd</span>_<span class="hljs-variable">find</span>_<span class="hljs-variable">charset</span>_<span class="hljs-variable">name</span>(<span class="hljs-variable">csname</span>);
+
+    <span class="hljs-variable">DBG</span>_<span class="hljs-variable">ENTER</span>(<span class="hljs-string">"mysqlnd_conn::set_charset"</span>);
+    <span class="hljs-variable">DBG</span>_<span class="hljs-variable">INF</span>_<span class="hljs-variable">FMT</span>(<span class="hljs-string">"conn=%llu cs=%s"</span>, <span class="hljs-variable">conn-</span>&gt;<span class="hljs-variable">thread</span>_<span class="hljs-variable">id</span>, <span class="hljs-variable">csname</span>);
+
+    <span class="hljs-variable"><span class="hljs-keyword">if</span></span> (!<span class="hljs-variable">charset</span>) {
+        <span class="hljs-variable">SET</span>_<span class="hljs-variable">CLIENT</span>_<span class="hljs-variable">ERROR</span>(<span class="hljs-variable">conn-</span>&gt;<span class="hljs-variable">error</span>_<span class="hljs-variable">info</span>, <span class="hljs-variable">CR</span>_<span class="hljs-variable">CANT</span>_<span class="hljs-variable">FIND</span>_<span class="hljs-variable">CHARSET</span>, <span class="hljs-variable">UNKNOWN</span>_<span class="hljs-variable">SQLSTATE</span>,
+                         <span class="hljs-string">"Invalid characterset or character set not supported"</span>);
+        <span class="hljs-variable">DBG</span>_<span class="hljs-variable">RETURN</span>(<span class="hljs-variable">FAIL</span>);
+    }
+
+    <span class="hljs-variable">query</span>_<span class="hljs-variable">len</span> = <span class="hljs-variable">spprintf</span>(&amp;<span class="hljs-variable">query</span>, 0, <span class="hljs-string">"SET NAMES %s"</span>, <span class="hljs-variable">csname</span>);
+
+    <span class="hljs-variable"><span class="hljs-keyword">if</span></span> (<span class="hljs-variable">FAIL</span> == <span class="hljs-variable">conn-</span>&gt;<span class="hljs-variable">m-</span>&gt;<span class="hljs-variable">query</span>(<span class="hljs-variable">conn</span>, <span class="hljs-variable">query</span>, <span class="hljs-variable">query</span>_<span class="hljs-variable">len</span> <span class="hljs-variable">TSRMLS</span>_<span class="hljs-variable">CC</span>)) {
+        <span class="hljs-variable">php</span>_<span class="hljs-variable">error</span>_<span class="hljs-variable">docref</span>(<span class="hljs-variable">NULL</span> <span class="hljs-variable">TSRMLS</span>_<span class="hljs-variable">CC</span>, <span class="hljs-variable">E</span>_<span class="hljs-variable">WARNING</span>, <span class="hljs-string">"Error executing query"</span>);
+    } <span class="hljs-variable"><span class="hljs-keyword">else</span></span> <span class="hljs-variable"><span class="hljs-keyword">if</span></span> (<span class="hljs-variable">conn-</span>&gt;<span class="hljs-variable">error</span>_<span class="hljs-variable">info.error</span>_<span class="hljs-variable">no</span>) {
+        <span class="hljs-variable">ret</span> = <span class="hljs-variable">FAIL</span>;
+    } <span class="hljs-variable"><span class="hljs-keyword">else</span></span> {
+        <span class="hljs-variable">conn-</span>&gt;<span class="hljs-variable">charset</span> = <span class="hljs-variable">charset</span>;
+    }
+    <span class="hljs-variable">efree</span>(<span class="hljs-variable">query</span>); /* <span class="hljs-variable">allocated</span> <span class="hljs-variable">by</span> <span class="hljs-variable">spprintf</span> */
+
+    <span class="hljs-variable">DBG</span>_<span class="hljs-variable">INF</span>(<span class="hljs-variable">ret</span> == <span class="hljs-variable">PASS</span>? <span class="hljs-string">"PASS"</span>:<span class="hljs-string">"FAIL"</span>);
+    <span class="hljs-variable">DBG</span>_<span class="hljs-variable">RETURN</span>(<span class="hljs-variable">ret</span>);
+}
+/* }}</span><span class="xml">} */</span>
+</code></pre>
+<p>可以看到，mysqlnd使用了SQL语句<code>SET NAMES utf8mb4</code>来设置字符集的。而如果没有使用这个扩展，则会使用<code>mysql.h</code>里声明的函数：</p>
+<pre class="hljs"><code class="lang-c"><span class="hljs-keyword">int</span>          <span class="hljs-function">STDCALL <span class="hljs-title">mysql_set_character_set</span><span class="hljs-params">(MYSQL *mysql, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span> *csname)</span></span>;
+</code></pre>
+<p>这个头文件是放在本地的，安装mysql扩展时需要设置这个路径，我估计，这就是问题服务器失败的原因吧。因为是使用原生的MySQL API，所以我猜测设置字符集时，会从本地路径<code>/usr/share/mysql/charsets/</code>读取配置，我查看了这个目录下的字符集配置，果然没有utf8mb4，所以失败，所以有在这个目录下添加这个字符集的描述的解决方案。</p>
+<p>通过上面的分析，除了添加描述的解决方案之外，还可以装mysqlnd扩展，并添加配置参数<code>--with-mysql=mysqlnd</code>。</p>
+<p>当然，还有个更简单的解决方案。既然mysqlnd是用SQL语句<code>SET NAMES utf8mb4</code>实现的，那为什么还要使用<code>mysql_set_charset</code>这个函数呢？于是，修改为：
+<code>mysql_query('SET NAMES utf8mb4');</code>，问题就解决了。</p>
+</div>
+        </div>
+        <hr>
+        <div class="container">
+            <p class="text-center"><a href="http://www.ifviva.com" target="_blank">访问博客网站</a></p>
+        </div>
+        <script src="../../../lib/jquery-2.1.4.js"></script>
+        <script src="../../../lib/bootstrap/js/bootstrap.js"></script>
+    </body>
+</html>
