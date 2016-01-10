@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>简单易用的gulp - 天时 - iMumu的个人博客归档</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="iMumu的个人博客">
+        <meta name="author" content="iMumu&lt;imumu@foxmail.com&gt;">
+        <meta name="keywords" content="天时,个人博客,web,html5,javascript,js,css,css3">
+        <link rel="stylesheet" href="../../../lib/bootstrap/css/bootstrap.css">
+        <link rel="stylesheet" href="../../../lib/tomorrow.css">
+        <link rel="stylesheet" href="../../../css/article.css">
+    </head>
+    <body>
+        <div class="jumbotron">
+            <div class="container text-center">
+                <h1>简单易用的gulp</h1>
+            </div>
+        </div>
+        <div class="container">
+            <ol class="breadcrumb">
+                <li><a href="../../../index.html">首页</a></li>
+                <li class="active">简单易用的gulp</li>
+            </ol>
+            <div><p><a href="http://gulpjs.com/" target="_blank">gulp</a>是一个基于流的自动化构建工具，简单、易用、高效。目前，我几乎所有的web项目都离不开它，实在是太好用了！下面我将分享我的一些心得。</p>
+<h2 id="-">复制文件</h2>
+<p>gulp的插件很多，但是如果你搜索复制文件的插件，会发现好少，因为其实根本没必要，gulp本身就能复制文件。例如下面的例子，将<code>test.md</code>从目录<code>./a/</code>复制到目录<code>./b/</code>：</p>
+<pre class="hljs"><code class="lang-js">gulp.src<span class="hljs-comment">('./a/test.md')</span>.pipe<span class="hljs-comment">(gulp.dest('./b/')</span>);
+</code></pre>
+<p>是不是很简单？唯一要做的，就是过滤一下，配置要复制的文件。比如复制这个目录下的图片：</p>
+<pre class="hljs"><code class="lang-js"><span class="hljs-tag">gulp</span><span class="hljs-class">.src</span>(<span class="hljs-string">'./src/**/*.{jpg,png,gif}'</span>)<span class="hljs-class">.pipe</span>(gulp.<span class="hljs-function">dest</span>(<span class="hljs-string">'./img/'</span>));
+</code></pre>
+<h2 id="-gulp-load-plugins">使用gulp-load-plugins</h2>
+<p>如果用每一个插件之前都要写一遍<code>var somePlugin = require('somePlugin')</code>，是不是很麻烦？可以使用<a href="https://www.npmjs.com/package/gulp-load-plugins" target="_blank">gulp-load-plugins</a>轻松解决。</p>
+<pre class="hljs"><code class="lang-js"><span class="hljs-keyword">var</span> gulp = <span class="hljs-built_in">require</span>(<span class="hljs-string">'gulp'</span>);
+<span class="hljs-keyword">var</span> plugins = <span class="hljs-built_in">require</span>(<span class="hljs-string">'gulp-load-plugins'</span>)();
+
+gulp.task(<span class="hljs-string">'markdown'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">return</span> gulp.src([<span class="hljs-string">'./src/articles/**/*.md'</span>])
+        .pipe(markdown())
+        .pipe(plugins.rename({
+            extname: <span class="hljs-string">'.html'</span>
+        }))
+        .pipe(gulp.dest(<span class="hljs-string">'./html-articles/'</span>));
+});
+</code></pre>
+<p>相当于：</p>
+<pre class="hljs"><code class="lang-js"><span class="hljs-keyword">var</span> gulp = <span class="hljs-built_in">require</span>(<span class="hljs-string">'gulp'</span>);
+<span class="hljs-keyword">var</span> rename = <span class="hljs-built_in">require</span>(<span class="hljs-string">'gulp-rename'</span>);
+
+gulp.task(<span class="hljs-string">'markdown'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">return</span> gulp.src([<span class="hljs-string">'./src/articles/**/*.md'</span>])
+        .pipe(markdown())
+        .pipe(rename({
+            extname: <span class="hljs-string">'.html'</span>
+        }))
+        .pipe(gulp.dest(<span class="hljs-string">'./html-articles/'</span>));
+});
+</code></pre>
+<h2 id="-">顺序执行任务</h2>
+<p>如果希望顺序执行一系列任务，那么可以使用<a href="https://www.npmjs.com/package/run-sequence" target="_blank">runSequence</a>：</p>
+<pre class="hljs"><code class="lang-js"><span class="hljs-keyword">var</span> gulp = <span class="hljs-built_in">require</span>(<span class="hljs-string">'gulp'</span>);
+<span class="hljs-keyword">var</span> runSequence = <span class="hljs-built_in">require</span>(<span class="hljs-string">'run-sequence'</span>);
+
+gulp.task(<span class="hljs-string">'build'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">callback</span>) </span>{
+    <span class="hljs-comment">// 将顺序执行这几个任务</span>
+    runSequence(<span class="hljs-string">'less'</span>, <span class="hljs-string">'markdown'</span>, <span class="hljs-string">'jade'</span>, <span class="hljs-string">'copy'</span>, callback);
+});
+</code></pre>
+<h2 id="-">自定义任务</h2>
+<p>有需要的时候，不一定是要使用插件，也可以根据需要自己定义任务：</p>
+<pre class="hljs"><code class="lang-js">gulp.task(<span class="hljs-string">'customTask'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(callback)</span> </span>{
+    doSomething(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(err)</span> </span>{
+        <span class="hljs-keyword">if</span> (err) <span class="hljs-keyword">callback</span>(err);
+        <span class="hljs-keyword">else</span> <span class="hljs-keyword">callback</span>();
+    });
+});
+</code></pre>
+<h2 id="-through2-">使用through2编写插件</h2>
+<p>当现有的插件无法满足需求的时候，不必再继续寻找，自己写一个也非常简单。<br>例如：</p>
+<pre class="hljs"><code class="lang-js"><span class="hljs-keyword">var</span> through = require(<span class="hljs-string">'through2'</span>);
+module.exports = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span> </span>{
+    <span class="hljs-keyword">return</span> through.obj(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(file, encoding, callback)</span> </span>{
+        <span class="hljs-comment">// 判断类型，使用buffer处理</span>
+        <span class="hljs-keyword">if</span> (file.isBuffer()) {
+            <span class="hljs-comment">// 读取文件内容</span>
+            markdownToHtml(file.contents.toString())
+            .then(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(html)</span> </span>{
+                file.contents = Buffer(html, encoding); <span class="hljs-comment">// 保存修改</span>
+                <span class="hljs-keyword">callback</span>(<span class="hljs-literal">null</span>, file); <span class="hljs-comment">// 完成处理</span>
+            })
+            .<span class="hljs-keyword">catch</span>(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(err)</span> </span>{
+                console.error(err.stack || err);
+                <span class="hljs-keyword">callback</span>(<span class="hljs-literal">null</span>, file); <span class="hljs-comment">// 这里可以根据需要是否做</span>
+            });
+        }
+        <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">callback</span>(<span class="hljs-literal">null</span>, file);
+        }
+    });
+};
+</code></pre>
+<p>这个插件的功能是将markdown文件通过自己编写的markdownToHtml函数转换成html，并不是公开发布，只为了满足特定的需求，所以写得比较随意，一个好的插件的代码应该是这样的：<a href="https://github.com/gulpjs/gulp/blob/master/docs/writing-a-plugin/guidelines.md#what-does-a-good-plugin-look-like" target="_blank">示例</a>。</p>
+<p>当有特定需求时，不妨写个简单的插件，只需要关心文件的输入输出，写好处理过程即可，其它的交给gulp，非常方便地批量处理一些文件，并且还可以和其它插件或任务组合实现更复杂的功能。</p>
+</div>
+        </div>
+        <hr>
+        <div class="container">
+            <p class="text-center"><a href="http://www.ifviva.com" target="_blank">访问博客网站</a></p>
+        </div>
+        <script src="../../../lib/jquery-2.1.4.js"></script>
+        <script src="../../../lib/bootstrap/js/bootstrap.js"></script>
+    </body>
+</html>
