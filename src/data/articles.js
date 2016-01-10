@@ -4,7 +4,7 @@ module.exports = {
     '2016-01': [
         {
             title: '简单易用的gulp',
-            date: '2016-01-09 20:24',
+            date: '2016-01-10 20:24',
             alias: 'easy-gulp'
         },
         {
